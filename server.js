@@ -1,27 +1,37 @@
-/** CLICKHOUSE URL Table Engine handler */
-/** BONUS: Stateful saves in deta base */
+/** CLICKHOUSE URL Table Engine handler w/ Deta storage */
+/** 
+
+    Create a URL Engine table w/ a custom ID or hash identifier:
+
+       CREATE TABLE default.url_engine_glitch
+       (
+           `key` String,
+           `value` UInt64
+       )
+       ENGINE = URL('https://url-engine.glitch.me/mysuperspecialkey', 'JSONEachRow');
+       
+    Insert into the distributed table
+       
+       INSERT INTO default.url_engine_glitch VALUES ('glitch!', 1);
+       
+    Query / Fetch the remote table
+       
+       SELECT * from default.url_engine_glitch;
+
+*/
 
 const fastify = require("fastify")({ logger: true });
-var memory = []; // our fake memory storage
 
 const { Deta } = require("deta");
 const deta = Deta(process.env.DETA_TOKEN || false);
 const db = deta.Base("shared"); // global shared db
-var detas = {}; // detas array
+var detas = {}; // detas tmp connection cache
 
 /** CLICKHOUSE URL SELECT */
-fastify.get("/", async (request, reply) => {
-  const { items } = await db.fetch();
-  return items;
-});
-
-fastify.get("/memory", async (request, reply) => {
-  return memory;
-});
-
-/** Get state from Deta */
 fastify.get("/:detabase", async (request, reply) => {
-  const { detabase } = request.params || "shared";
+  console.log('!!!', request.params, request)
+  const { detabase } = request.params;
+  if (!detabase) return;
   if (!detas[detabase]) {
     detas[detabase] = deta.Base(detabase);
   }
@@ -31,24 +41,9 @@ fastify.get("/:detabase", async (request, reply) => {
 });
 
 /** CLICKHOUSE URL INSERT */
-fastify.post("/", async (request, reply) => {
-  request.body.forEach((row) => {
-    // memory.push({ key: row.key, value: parseInt(row.value) });
-    db.put({ key: row.key, value: parseInt(row.value) });
-  });
-  return {};
-});
-
-fastify.post("/memory", async (request, reply) => {
-  request.body.forEach((row) => {
-    memory.push({ key: row.key, value: parseInt(row.value) });
-  });
-  return {};
-});
-
-/** Save state in Deta **/
 fastify.post("/:detabase", async (request, reply) => {
-  const { detabase } = request.params || "shared";
+  const { detabase } = request.params;
+  if (!detabase) return;
   if (!detas[detabase]) {
     detas[detabase] = deta.Base(detabase);
   }
@@ -79,6 +74,7 @@ async function getContentBody(req) {
 async function genericJSONParser(req) {
   try {
     var body = await getContentBody(req);
+    // x-ndjson to json
     const response = body
       .trim()
       .split("\n")
