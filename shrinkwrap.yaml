@@ -1,4 +1,5 @@
 dependencies:
+  deta: 1.1.0
   fastify: 3.29.0
 packages:
   /@fastify/ajv-compiler/1.1.0:
@@ -72,6 +73,12 @@ packages:
       node: '>=0.10.0'
     resolution:
       integrity: sha512-FJ3UgI4gIl+PHZm53knsuSFpE+nESMr7M4v9QcgB7S63Kj/6WqMiFQJpBBYz1Pt+66bZpP3Q7Lye0Oo9MPKEdg==
+  /deta/1.1.0:
+    dependencies:
+      node-fetch: 2.6.7
+    dev: false
+    resolution:
+      integrity: sha512-mQAvfAsB++McPMT3Gb39KWkxfFzaPSF+z8XNpomakkUslg9xTu6Z8gVjAXaDGJm0LFEIIZQdokpU+lOJOXtOqw==
   /fast-decode-uri-component/1.0.1:
     dev: false
     resolution:
@@ -187,6 +194,16 @@ packages:
     dev: false
     resolution:
       integrity: sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==
+  /node-fetch/2.6.7:
+    dependencies:
+      whatwg-url: 5.0.0
+    dev: false
+    engines:
+      node: 4.x || >=6.0.0
+    peerDependencies:
+      encoding: ^0.1.0
+    resolution:
+      integrity: sha512-ZjMPFEfVx5j+y2yF35Kzx5sF7kDzxuDj6ziH4FFbOp87zKDZNx8yExJIb05OGF4Nlt9IHFIMBkRl41VdvcNdbQ==
   /pino-std-serializers/3.2.0:
     dev: false
     resolution:
@@ -298,12 +315,27 @@ packages:
       node: '>=6'
     resolution:
       integrity: sha512-ApGvZ6vVvTNdsmt676grvCkUCGwzG9IqXma5Z07xJgiC5L7akUMof5U8G2JTI9Rz/ovtVhJBlY6mNhEvtjzOIg==
+  /tr46/0.0.3:
+    dev: false
+    resolution:
+      integrity: sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==
   /uri-js/4.4.1:
     dependencies:
       punycode: 2.1.1
     dev: false
     resolution:
       integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==
+  /webidl-conversions/3.0.1:
+    dev: false
+    resolution:
+      integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==
+  /whatwg-url/5.0.0:
+    dependencies:
+      tr46: 0.0.3
+      webidl-conversions: 3.0.1
+    dev: false
+    resolution:
+      integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==
   /yallist/4.0.0:
     dev: false
     resolution:
@@ -312,4 +344,5 @@ registry: 'https://registry.npmjs.org/'
 shrinkwrapMinorVersion: 9
 shrinkwrapVersion: 3
 specifiers:
+  deta: ^1.1.0
   fastify: ^3.27.2

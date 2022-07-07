@@ -1,18 +1,51 @@
 /** CLICKHOUSE URL Table Engine handler */
+/** BONUS: Stateful saves in deta */
 
 const fastify = require("fastify")({ logger: true });
 var memory = []; // our fake memory storage
 
+const { Deta } = require("deta");
+const deta = Deta(process.env.DETA_TOKEN || false);
+const db = deta.Base("shared");
+
 /** CLICKHOUSE URL SELECT */
 fastify.get("/", async (request, reply) => {
-  return memory;
+  const { items } = await db.fetch();
+  return items;
+  // return memory;
+});
+
+/** Get state from Deta */
+fastify.get("/:detabase", async (request, reply) => {
+  const { detabase } = request.params || "shared";
+  const db = deta.Base(detabase);
+  const { items } = await db.fetch();
+  return items;
 });
 
 /** CLICKHOUSE URL INSERT */
 fastify.post("/", async (request, reply) => {
-  request.body.forEach((row) =>
-    memory.push({ key: row.key, value: parseInt(row.value) })
-  );
+  request.body.forEach((row) => {
+    // memory.push({ key: row.key, value: parseInt(row.value) });
+    db.put({ key: row.key, value: parseInt(row.value) });
+  });
+  return {};
+});
+
+fastify.post("/memory", async (request, reply) => {
+  request.body.forEach((row) => {
+    memory.push({ key: row.key, value: parseInt(row.value) });
+  });
+  return {};
+});
+
+/** Save state in Deta **/
+fastify.post("/:detabase", async (request, reply) => {
+  const { detabase } = request.params || "shared";
+  const db = deta.Base(detabase);
+  request.body.forEach((row) => {
+    db.put({ key: row.key, value: parseInt(row.value) });
+  });
   return {};
 });
 
