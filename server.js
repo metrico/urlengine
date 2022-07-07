@@ -22,13 +22,11 @@ fastify.get("/memory", async (request, reply) => {
 /** Get state from Deta */
 fastify.get("/:detabase", async (request, reply) => {
   const { detabase } = request.params || "shared";
-  if (detas[detabase]) {
-    const db = detas[detabase];
-  } else {
-    const db = deta.Base(detabase);
-    detas[detabase] = db;
+  console.log('!!!!!!!!!!!', detabase, request);
+  if (!detas[detabase]) {
+    detas[detabase] = deta.Base(detabase);
   }
-
+  const db = detas[detabase];
   const { items } = await db.fetch();
   return items;
 });
@@ -51,13 +49,12 @@ fastify.post("/memory", async (request, reply) => {
 
 /** Save state in Deta **/
 fastify.post("/:detabase", async (request, reply) => {
-  const { detabase } = request.params || "shared";
-  if (detas[detabase]) {
-    const db = detas[detabase];
-  } else {
-    const db = deta.Base(detabase);
-    detas[detabase] = db;
+  const { detabase } = request.params;
+  console.log('!!!!!!!!!!!', detabase);
+  if (!detas[detabase]) {
+    detas[detabase] = deta.Base(detabase);
   }
+  const db = detas[detabase];
   request.body.forEach((row) => {
     db.put({ key: row.key, value: parseInt(row.value) });
   });
