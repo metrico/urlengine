@@ -1,5 +1,5 @@
 /** CLICKHOUSE URL Table Engine handler */
-/** BONUS: Stateful saves in deta */
+/** BONUS: Stateful saves in deta base */
 
 const fastify = require("fastify")({ logger: true });
 var memory = []; // our fake memory storage
@@ -22,7 +22,6 @@ fastify.get("/memory", async (request, reply) => {
 /** Get state from Deta */
 fastify.get("/:detabase", async (request, reply) => {
   const { detabase } = request.params || "shared";
-  console.log('!!!!!!!!!!!', detabase, request);
   if (!detas[detabase]) {
     detas[detabase] = deta.Base(detabase);
   }
@@ -49,8 +48,7 @@ fastify.post("/memory", async (request, reply) => {
 
 /** Save state in Deta **/
 fastify.post("/:detabase", async (request, reply) => {
-  const { detabase } = request.params;
-  console.log('!!!!!!!!!!!', detabase);
+  const { detabase } = request.params || "shared";
   if (!detas[detabase]) {
     detas[detabase] = deta.Base(detabase);
   }
