@@ -6,19 +6,29 @@ var memory = []; // our fake memory storage
 
 const { Deta } = require("deta");
 const deta = Deta(process.env.DETA_TOKEN || false);
-const db = deta.Base("shared");
+const db = deta.Base("shared"); // global shared db
+var detas = {}; // detas array
 
 /** CLICKHOUSE URL SELECT */
 fastify.get("/", async (request, reply) => {
   const { items } = await db.fetch();
   return items;
-  // return memory;
+});
+
+fastify.get("/memory", async (request, reply) => {
+  return memory;
 });
 
 /** Get state from Deta */
 fastify.get("/:detabase", async (request, reply) => {
   const { detabase } = request.params || "shared";
-  const db = deta.Base(detabase);
+  if (detas[detabase]) {
+    const db = detas[detabase];
+  } else {
+    const db = deta.Base(detabase);
+    detas[detabase] = db;
+  }
+
   const { items } = await db.fetch();
   return items;
 });
@@ -42,7 +52,12 @@ fastify.post("/memory", async (request, reply) => {
 /** Save state in Deta **/
 fastify.post("/:detabase", async (request, reply) => {
   const { detabase } = request.params || "shared";
-  const db = deta.Base(detabase);
+  if (detas[detabase]) {
+    const db = detas[detabase];
+  } else {
+    const db = deta.Base(detabase);
+    detas[detabase] = db;
+  }
   request.body.forEach((row) => {
     db.put({ key: row.key, value: parseInt(row.value) });
   });

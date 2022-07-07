@@ -1,7 +1,10 @@
 {
   "name": "ch-url-engine",
-  "author": "",
-  "version": "1.0.0",
+  "author": "qxip",
+  "version": "1.0.1",
+  "engines": {
+    "node": "16.x"
+  },
   "description": "Clickhouse URL Engine service example",
   "main": "server.js",
   "scripts": {
@@ -10,7 +13,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "fastify": "^3.27.2",
+    "fastify": "^4.1.0",
     "deta": "^1.1.0"
   }
 }
