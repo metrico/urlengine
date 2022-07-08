@@ -18,6 +18,12 @@
        
        SELECT * from default.url_engine_glitch;
 
+    Query using url Function:
+    
+       INSERT INTO FUNCTION url('https://url-engine.glitch.me/glitch',JSONEachRow,'key String, value UInt64') VALUES ('hello, 1), ('world', 2)
+       SELECT * FROM url('https://url-engine.glitch.me/glitch', JSONEachRow);
+
+
 */
 
 const fastify = require("fastify")({ logger: true });
@@ -26,6 +32,10 @@ const { Deta } = require("deta");
 const deta = Deta(process.env.DETA_TOKEN || false);
 const db = deta.Base("shared"); // global shared db
 var detas = {}; // detas tmp connection cache
+
+// LRU with last used sockets
+const QuickLRU = require("quick-lru");
+const lru = new QuickLRU({ maxSize: 100, onEviction: false });
 
 /** CLICKHOUSE URL SELECT */
 fastify.get("/:detabase", async (request, reply) => {
@@ -50,7 +60,7 @@ fastify.post("/:detabase", async (request, reply) => {
   }
   const db = detas[detabase];
   request.body.forEach((row) => {
-    db.put(row);
+    db.put(row); // Insert raw JSON objects from ClickHouse
   });
   return {};
 });
