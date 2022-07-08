@@ -50,7 +50,7 @@ fastify.post("/:detabase", async (request, reply) => {
   }
   const db = detas[detabase];
   request.body.forEach((row) => {
-    db.put({ key: row.key, value: parseInt(row.value) });
+    db.put(row);
   });
   return {};
 });
