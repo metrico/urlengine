@@ -29,7 +29,7 @@ var detas = {}; // detas tmp connection cache
 
 /** CLICKHOUSE URL SELECT */
 fastify.get("/:detabase", async (request, reply) => {
-  console.log('!!!', request.params, request)
+  console.log('SELECT ---->', request.params, request.headers)
   const { detabase } = request.params;
   if (!detabase) return;
   if (!detas[detabase]) {
@@ -42,6 +42,7 @@ fastify.get("/:detabase", async (request, reply) => {
 
 /** CLICKHOUSE URL INSERT */
 fastify.post("/:detabase", async (request, reply) => {
+  console.log('INSERT ---->', request.params, request.headers)
   const { detabase } = request.params;
   if (!detabase) return;
   if (!detas[detabase]) {
