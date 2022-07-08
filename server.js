@@ -39,9 +39,16 @@ const lru = new QuickLRU({ maxSize: 100, onEviction: false });
 
 /** CLICKHOUSE URL SELECT */
 fastify.get("/:detabase", async (request, reply) => {
-  console.log('SELECT ---->', request.params, request.headers)
+  //console.log('SELECT ---->', request.params, request.headers)
   const { detabase } = request.params;
   if (!detabase) return;
+  /*
+  if (!lru.has(detabase)) {
+    lru.set(detabase, deta.Base(detabase))
+  }
+  const db = await lru.get(detabase);
+  */
+
   if (!detas[detabase]) {
     detas[detabase] = deta.Base(detabase);
   }
@@ -52,9 +59,15 @@ fastify.get("/:detabase", async (request, reply) => {
 
 /** CLICKHOUSE URL INSERT */
 fastify.post("/:detabase", async (request, reply) => {
-  console.log('INSERT ---->', request.params, request.headers)
+  //console.log('INSERT ---->', request.params, request.headers)
   const { detabase } = request.params;
   if (!detabase) return;
+  /*
+  if (!lru.has(detabase)) {
+    lru.set(detabase, deta.Base(detabase))
+  }
+  const db = await lru.get(detabase);
+  */
   if (!detas[detabase]) {
     detas[detabase] = deta.Base(detabase);
   }

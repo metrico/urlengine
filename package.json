@@ -15,6 +15,6 @@
   "dependencies": {
     "fastify": "^4.1.0",
     "deta": "^1.1.0",
-    "quick-lru": "^6.1.1"
+    "quick-lru": "^5.1.0"
   }
 }
