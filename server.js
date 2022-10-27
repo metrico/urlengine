@@ -1,4 +1,5 @@
 /** CLICKHOUSE URL Table Engine handler w/ Deta storage */
+/** (C) QXIP BV, 2022 **/
 /** 
 
     Create a URL Engine table w/ a custom ID or hash identifier:
@@ -33,21 +34,10 @@ const deta = Deta(process.env.DETA_TOKEN || false);
 const db = deta.Base("shared"); // global shared db
 var detas = {}; // detas tmp connection cache
 
-// LRU with last used sockets
-const QuickLRU = require("quick-lru");
-const lru = new QuickLRU({ maxSize: 100, onEviction: false });
-
 /** CLICKHOUSE URL SELECT */
 fastify.get("/:detabase", async (request, reply) => {
-  //console.log('SELECT ---->', request.params, request.headers)
   const { detabase } = request.params;
   if (!detabase) return;
-  /*
-  if (!lru.has(detabase)) {
-    lru.set(detabase, deta.Base(detabase))
-  }
-  const db = await lru.get(detabase);
-  */
 
   if (!detas[detabase]) {
     detas[detabase] = deta.Base(detabase);
@@ -59,15 +49,9 @@ fastify.get("/:detabase", async (request, reply) => {
 
 /** CLICKHOUSE URL INSERT */
 fastify.post("/:detabase", async (request, reply) => {
-  //console.log('INSERT ---->', request.params, request.headers)
   const { detabase } = request.params;
   if (!detabase) return;
-  /*
-  if (!lru.has(detabase)) {
-    lru.set(detabase, deta.Base(detabase))
-  }
-  const db = await lru.get(detabase);
-  */
+
   if (!detas[detabase]) {
     detas[detabase] = deta.Base(detabase);
   }
@@ -122,7 +106,7 @@ fastify.addContentTypeParser("*", {}, async function (req, body, done) {
 /** RUN URL Engine */
 const start = async () => {
   try {
-    await fastify.listen(3000);
+    await fastify.listen({ port: 3000});
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

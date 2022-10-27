@@ -1,6 +1,6 @@
 {
-  "name": "ch-url-engine",
-  "author": "qxip",
+  "name": "clickhouse-url-engine-glitch",
+  "author": "L. Mangani <lorenzo.mangani@gmail.com>",
   "version": "1.0.1",
   "engines": {
     "node": "16.x"
@@ -13,8 +13,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "fastify": "^4.1.0",
-    "deta": "^1.1.0",
-    "quick-lru": "^5.1.0"
+    "fastify": "^4.9.2",
+    "deta": "^1.1.0"
   }
 }
