@@ -2,7 +2,7 @@ const fastify = require("fastify")({ logger: true });
 const fs = require('fs').promises;
 const path = require('path');
 
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = path.join(__dirname, '/tmp/data');
 
 // Ensure the data directory exists
 fs.mkdir(DATA_DIR, { recursive: true }).catch(console.error);
@@ -36,46 +36,43 @@ async function getFileStats(filePath) {
 
 /** CLICKHOUSE URL SELECT */
 fastify.get("/:database", async (request, reply) => {
-  const { database } = request.params;
-  if (!database) return reply.code(400).send({ error: 'Database name is required' });
-  
-  const filePath = path.join(DATA_DIR, `${database}.json`);
-  const items = await readJsonFile(filePath);
-  return items;
+  try {
+    const { database } = request.params;
+    if (!database) return reply.code(400).send({ error: 'Database name is required' });
+    
+    const filePath = path.join(DATA_DIR, `${database}.json`);
+    const items = await readJsonFile(filePath);
+    return items;
+  } catch (error) {
+    request.log.error(error);
+    reply.code(500).send({ error: 'Internal Server Error' });
+  }
 });
 
 /** CLICKHOUSE URL HEAD */
 fastify.head("/:database", async (request, reply) => {
-  const { database } = request.params;
-  if (!database) return reply.code(400).send({ error: 'Database name is required' });
-  
-  const filePath = path.join(DATA_DIR, `${database}.json`);
-  const stats = await getFileStats(filePath);
-  
-  if (stats) {
-    reply.header('Content-Length', stats.size);
-    reply.header('Last-Modified', stats.mtime.toUTCString());
-  } else {
-    reply.code(404);
-  }
-  
-  return reply.send();
+  reply.code(200).send(); 
 });
 
 /** CLICKHOUSE URL INSERT */
 fastify.post("/:database", async (request, reply) => {
-  const { database } = request.params;
-  if (!database) return reply.code(400).send({ error: 'Database name is required' });
-  
-  const filePath = path.join(DATA_DIR, `${database}.json`);
-  const existingData = await readJsonFile(filePath);
-  
-  request.body.forEach((row) => {
-    existingData.push(row); // Insert raw JSON objects from ClickHouse
-  });
-  
-  await writeJsonFile(filePath, existingData);
-  return {};
+  try {
+    const { database } = request.params;
+    if (!database) return reply.code(400).send({ error: 'Database name is required' });
+    
+    const filePath = path.join(DATA_DIR, `${database}.json`);
+    const existingData = await readJsonFile(filePath);
+    
+    request.body.forEach((row) => {
+      existingData.push(row); // Insert raw JSON objects from ClickHouse
+    });
+    
+    await writeJsonFile(filePath, existingData);
+    return {};
+  } catch (error) {
+    request.log.error(error);
+    reply.code(500).send({ error: 'Internal Server Error' });
+  }
 });
 
 /**
@@ -122,7 +119,8 @@ fastify.addContentTypeParser("*", {}, async function (req, body, done) {
 /** RUN URL Engine */
 const start = async () => {
   try {
-    await fastify.listen({ port: 3000 });
+    await fastify.listen({ port: 3000, host: '0.0.0.0' });
+    console.log(`Server is running on http://0.0.0.0:3000`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
