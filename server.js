@@ -8,6 +8,8 @@ fastify.get("/:key", async (request, reply) => {
   const { key } = request.params;
   if (!key) return reply.code(400).send({ error: 'Key is required' });
   
+  console.log(storage);
+  
   const data = storage.get(key);
   if (data === undefined) {
     return reply.code(404).send({ error: 'Not found' });
@@ -47,16 +49,13 @@ async function octetStreamParser(req) {
   try {
     const buffer = await getRawBody(req);
     const jsonString = buffer.toString('utf8');
-    if (jsonString.length <= 1) return false;
-    return JSON.parse(jsonString);
-    /*
+    if (jsonString.length <= 1) throw false;  
     // Split the string into lines and parse each line as JSON
     const jsonObjects = jsonString
       .trim()
       .split('\n')
       .map(line => JSON.parse(line));
     return jsonObjects;
-    */
   } catch (err) {
     err.statusCode = 400;
     throw err;
