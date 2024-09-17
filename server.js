@@ -1,67 +1,28 @@
-/** CLICKHOUSE URL Table Engine handler w/ Deta storage */
-/** (C) QXIP BV, 2022 **/
-/** 
-
-    Create a URL Engine table w/ a custom ID or hash identifier:
-
-       CREATE TABLE default.url_engine_glitch
-       (
-           `key` String,
-           `value` UInt64
-       )
-       ENGINE = URL('https://url-engine.glitch.me/mysuperspecialkey', 'JSONEachRow');
-       
-    Insert into the distributed table
-       
-       INSERT INTO default.url_engine_glitch VALUES ('glitch!', 1);
-       
-    Query / Fetch the remote table
-       
-       SELECT * from default.url_engine_glitch;
-
-    Query using url Function:
-    
-       INSERT INTO FUNCTION url('https://url-engine.glitch.me/glitch',JSONEachRow,'key String, value UInt64') VALUES ('hello, 1), ('world', 2)
-       SELECT * FROM url('https://url-engine.glitch.me/glitch', JSONEachRow);
-
-
-*/
-
 const fastify = require("fastify")({ logger: true });
 
-const { Deta } = require("deta");
-const deta = Deta(process.env.DETA_TOKEN || false);
-const db = deta.Base("shared"); // global shared db
-var detas = {}; // detas tmp connection cache
-
-var local = [];
+// In-memory storage
+const storage = new Map();
 
 /** CLICKHOUSE URL SELECT */
-fastify.get("/:detabase", async (request, reply) => {
-  const { detabase } = request.params;
-  if (!detabase) return;
-
-  if (!detas[detabase]) {
-    detas[detabase] = deta.Base(detabase);
+fastify.get("/:key", async (request, reply) => {
+  const { key } = request.params;
+  if (!key) return reply.code(400).send({ error: 'Key is required' });
+  
+  const data = storage.get(key);
+  if (data === undefined) {
+    return reply.code(404).send({ error: 'Not found' });
   }
-  const db = detas[detabase];
-  const { items } = await db.fetch();
-  return items;
+  return data;
 });
 
-/** CLICKHOUSE URL INSERT */
-fastify.post("/:detabase", async (request, reply) => {
-  const { detabase } = request.params;
-  if (!detabase) return;
 
-  if (!detas[detabase]) {
-    detas[detabase] = deta.Base(detabase);
-  }
-  const db = detas[detabase];
-  request.body.forEach((row) => {
-    db.put(row); // Insert raw JSON objects from ClickHouse
-  });
-  return {};
+/** CLICKHOUSE URL INSERT */
+fastify.post("/:key", async (request, reply) => {
+  const { key } = request.params;
+  if (!key) return reply.code(400).send({ error: 'Key is required' });
+  
+  storage.set(key, request.body);
+  return { success: true };
 });
 
 /**
@@ -84,7 +45,7 @@ async function getContentBody(req) {
 async function genericJSONParser(req) {
   try {
     var body = await getContentBody(req);
-    console.log('!!!!!!!!!!!!!!!!!!!!!!', body)
+    console.log('!!!!!!!!!', body);
     // x-ndjson to json
     const response = body
       .trim()
@@ -102,19 +63,19 @@ async function genericJSONParser(req) {
   }
 }
 
-/*
 fastify.addContentTypeParser("*", {}, async function (req, body, done) {
   return await genericJSONParser(req);
 });
-*/
 
 /** RUN URL Engine */
 const start = async () => {
   try {
-    await fastify.listen({ port: 3000 });
+    await fastify.listen({ port: 3000, host: '0.0.0.0' });
+    console.log(`Server is running on http://0.0.0.0:3000`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
   }
 };
+
 start();
