@@ -95,6 +95,8 @@ async function getContentBody(req) {
 async function genericJSONParser(req) {
   try {
     var body = await getContentBody(req);
+    console.log('!!!!!!!!!!!!!!!!!!!!!!!', body);
+    return body;
     // x-ndjson to json
     const response = body
       .trim()

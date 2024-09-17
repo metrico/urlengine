@@ -84,6 +84,7 @@ async function getContentBody(req) {
 async function genericJSONParser(req) {
   try {
     var body = await getContentBody(req);
+    console.log('!!!!!!!!!!!!!!!!!!!!!!', body)
     // x-ndjson to json
     const response = body
       .trim()
@@ -101,9 +102,11 @@ async function genericJSONParser(req) {
   }
 }
 
+/*
 fastify.addContentTypeParser("*", {}, async function (req, body, done) {
   return await genericJSONParser(req);
 });
+*/
 
 /** RUN URL Engine */
 const start = async () => {
