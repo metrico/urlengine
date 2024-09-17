@@ -33,7 +33,7 @@ async function writeFile(key, data) {
 /** CLICKHOUSE URL SELECT */
 fastify.get("/:key", async (request, reply) => {
   const { key } = request.params;
-  if (!key) return reply.code(400).send({ error: "Key is required" });
+  if (!key) return reply.code(400).send();
 
   const data = await readFile(key);
   if (data === null) {
