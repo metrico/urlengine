@@ -25,47 +25,46 @@ fastify.post("/:key", async (request, reply) => {
   return { success: true };
 });
 
+
 /**
  * @param req {FastifyRequest}
- * @returns {Promise<string>}
+ * @returns {Promise<Buffer>}
  */
-async function getContentBody(req) {
-  let body = "";
-  req.raw.on("data", (data) => {
-    body += data.toString();
+async function getRawBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.raw.on('data', chunk => chunks.push(chunk));
+    req.raw.on('end', () => resolve(Buffer.concat(chunks)));
+    req.raw.on('error', reject);
   });
-  await new Promise((resolve) => req.raw.once("end", resolve));
-  return body;
 }
 
 /**
  * @param req {FastifyRequest}
- * @returns {Promise<void>}
+ * @returns {Promise<object[]>}
  */
-async function genericJSONParser(req) {
+async function octetStreamParser(req) {
   try {
-    var body = await getContentBody(req);
-    console.log('!!!!!!!!!', body);
-    // x-ndjson to json
-    const response = body
+    const buffer = await getRawBody(req);
+    const jsonString = buffer.toString('utf8');
+    console.log('!!!!!!!!!',jsonString);
+    return jsonString;
+    /*
+    // Split the string into lines and parse each line as JSON
+    const jsonObjects = jsonString
       .trim()
-      .split("\n")
-      .map(JSON.parse)
-      .map((obj) =>
-        Object.entries(obj)
-          .sort()
-          .reduce((o, [k, v]) => ((o[k] = v), o), {})
-      );
-    return response;
+      .split('\n')
+      .map(line => JSON.parse(line));
+    return jsonObjects;
+    */
   } catch (err) {
     err.statusCode = 400;
     throw err;
   }
 }
 
-fastify.addContentTypeParser("*", {}, async function (req, body, done) {
-  return await genericJSONParser(req);
-});
+// Add a custom parser for 'application/octet-stream'
+fastify.addContentTypeParser('application/octet-stream', octetStreamParser);
 
 /** RUN URL Engine */
 const start = async () => {
