@@ -92,24 +92,6 @@ async function decrypt(content, key) {
     return decoder.decode(decrypted);
 }
 
-/*
-async function load(fingerprint, hash) {
-    const response = await fetchJson(
-        clickhouseUrl,
-        { method: 'POST', body: `SELECT content, is_encrypted, lower(hex(reinterpretAsFixedString(prev_hash))) AS prev_hash, lower(hex(reinterpretAsFixedString(prev_fingerprint))) AS prev_fingerprint FROM data WHERE fingerprint = reinterpretAsUInt32(unhex('${fingerprint}')) AND hash = reinterpretAsUInt128(unhex('${hash}')) ORDER BY time LIMIT 1 FORMAT JSON` }
-    );
-    console.log('DEBUG RESPONSE', response);
-    const result = response.data[0];
-    let content = result.content;
-    const isEncrypted = result.is_encrypted;
-    if (isEncrypted) {
-        const key = Uint8Array.from(atob(window.location.hash.substring(1)), c => c.charCodeAt(0));
-        content = await decrypt(content, key);
-    }
-    return { content, prevHash: result.prev_hash, prevFingerprint: result.prev_fingerprint };
-}
-*/
-
 async function load(fingerprint, hash, type) {
     const clickhouseUrl = "https://play.clickhouse.com/?user=paste";  // Adjust this URL as needed
 

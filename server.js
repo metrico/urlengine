@@ -1,62 +1,38 @@
-const fastify = require("fastify")({ logger: true });
-const fs = require("fs").promises;
-const path = require("path");
+import fastify from 'fastify';
+import { save, load } from './pastila.js'; // Import your functions here
 
-const STORAGE_DIR = path.join(__dirname, "/tmp/storage");
-
-// Ensure storage directory exists
-fs.mkdir(STORAGE_DIR, { recursive: true }).catch(console.error);
-
-async function getFilePath(key) {
-  return path.join(STORAGE_DIR, `${key}.json`);
-}
-
-async function readFile(key) {
-  const filePath = await getFilePath(key);
-  try {
-    console.log("reading: ", filePath);
-    const data = await fs.readFile(filePath, "utf8");
-    return JSON.parse(data);
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      return null;
-    }
-    throw error;
-  }
-}
-
-async function writeFile(key, data) {
-  const filePath = await getFilePath(key);
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf8");
-}
-
-/** CLICKHOUSE URL SELECT */
+// Handle GET requests
 fastify.get("/:key", async (request, reply) => {
   const { key } = request.params;
-  if (!key) return reply.code(400).send();
+  if (!key) return reply.code(400).send({ error: "Key is required" });
 
-  const data = await readFile(key);
-  if (data === null) {
+  try {
+    // Use the load function to get the data
+    const result = await load(key, key); // Adjust parameters if necessary
+    return { content: result };
+  } catch (error) {
     return reply.code(404).send({ error: "Not found" });
   }
-  return data;
 });
 
-/** CLICKHOUSE URL INSERT */
+// Handle POST requests
 fastify.post("/:key", async (request, reply) => {
   const { key } = request.params;
   if (!key) return reply.code(400).send({ error: "Key is required" });
 
-  const data = Array.isArray(request.body) ? request.body : [request.body];
-  if (data.length == 0) return;
-  await writeFile(key, data);
-  return { success: true };
+  try {
+    const data = Array.isArray(request.body) ? request.body : [request.body];
+    if (data.length === 0) return reply.code(400).send({ error: "No data provided" });
+
+    // Use the save function to save the data
+    const savedId = await save(data, key, key, false); // Adjust parameters if necessary
+    return { success: true, id: savedId };
+  } catch (error) {
+    return reply.code(500).send({ error: "Error saving data" });
+  }
 });
 
-/**
- * @param req {FastifyRequest}
- * @returns {Promise<Buffer>}
- */
+// Helper function to parse application/octet-stream
 async function getRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -66,10 +42,6 @@ async function getRawBody(req) {
   });
 }
 
-/**
- * @param req {FastifyRequest}
- * @returns {Promise<object[]>}
- */
 async function octetStreamParser(req) {
   try {
     const buffer = await getRawBody(req);
@@ -77,7 +49,6 @@ async function octetStreamParser(req) {
     if (jsonString.trim().length === 0) {
       return [];
     }
-    // Split the string into lines and parse each line as JSON
     const jsonObjects = jsonString
       .trim()
       .split("\n")
@@ -93,7 +64,7 @@ async function octetStreamParser(req) {
 // Add a custom parser for 'application/octet-stream'
 fastify.addContentTypeParser("application/octet-stream", octetStreamParser);
 
-/** RUN URL Engine */
+// Start the Fastify server
 const start = async () => {
   try {
     await fastify.listen({ port: process.env.PORT || 3000, host: "0.0.0.0" });
