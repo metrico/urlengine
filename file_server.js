@@ -14,9 +14,10 @@ async function getFilePath(key) {
 async function readFile(key) {
   const filePath = await getFilePath(key);
   try {
-    console.log("reading: ", filePath);
+    // console.log("reading: ", filePath);
     const data = await fs.readFile(filePath, "utf8");
-    return JSON.parse(data);
+    return data;
+    // return JSON.parse(data);
   } catch (error) {
     if (error.code === "ENOENT") {
       return null;
@@ -34,7 +35,6 @@ async function writeFile(key, data) {
 fastify.get("/:key", async (request, reply) => {
   const { key } = request.params;
   if (!key) return reply.code(400).send();
-
   const data = await readFile(key);
   if (data === null) {
     return reply.code(404).send({ error: "Not found" });
@@ -46,7 +46,6 @@ fastify.get("/:key", async (request, reply) => {
 fastify.post("/:key", async (request, reply) => {
   const { key } = request.params;
   if (!key) return reply.code(400).send({ error: "Key is required" });
-
   const data = Array.isArray(request.body) ? request.body : [request.body];
   if (data.length == 0) return;
   await writeFile(key, data);
@@ -97,7 +96,7 @@ fastify.addContentTypeParser("application/octet-stream", octetStreamParser);
 const start = async () => {
   try {
     await fastify.listen({ port: process.env.PORT || 3000, host: "0.0.0.0" });
-    console.log(`Server is running on http://0.0.0.0:3000`);
+    // console.log(`Server is running`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
