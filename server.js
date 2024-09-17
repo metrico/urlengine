@@ -16,7 +16,6 @@ async function readFile(key) {
   try {
     console.log("reading: ", filePath);
     const data = await fs.readFile(filePath, "utf8");
-    console.log("got data: ", data);
     return JSON.parse(data);
   } catch (error) {
     if (error.code === "ENOENT") {
@@ -50,7 +49,6 @@ fastify.post("/:key", async (request, reply) => {
 
   const data = Array.isArray(request.body) ? request.body : [request.body];
   if (data.length == 0) return;
-  console.log("writing: ", data);
   await writeFile(key, data);
   return { success: true };
 });
