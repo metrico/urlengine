@@ -34,6 +34,8 @@ const deta = Deta(process.env.DETA_TOKEN || false);
 const db = deta.Base("shared"); // global shared db
 var detas = {}; // detas tmp connection cache
 
+var local = [];
+
 /** CLICKHOUSE URL SELECT */
 fastify.get("/:detabase", async (request, reply) => {
   const { detabase } = request.params;
@@ -106,7 +108,7 @@ fastify.addContentTypeParser("*", {}, async function (req, body, done) {
 /** RUN URL Engine */
 const start = async () => {
   try {
-    await fastify.listen({ port: 3000});
+    await fastify.listen({ port: 3000 });
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
