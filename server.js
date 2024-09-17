@@ -47,8 +47,8 @@ async function octetStreamParser(req) {
   try {
     const buffer = await getRawBody(req);
     const jsonString = buffer.toString('utf8');
-    console.log('!!!!!!!!!',jsonString);
-    return jsonString;
+    if (jsonString.length <= 1) return false;
+    return JSON.parse(jsonString);
     /*
     // Split the string into lines and parse each line as JSON
     const jsonObjects = jsonString
