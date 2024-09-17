@@ -3,12 +3,14 @@ const clickhouseUrl = "https://play.clickhouse.com/?user=paste";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+// Fetch JSON utility function
 async function fetchJson(url, options) {
     const response = await fetch(url, options);
     if (!response.ok) throw new Error(`HTTP status ${response.status}`);
     return await response.json();
 }
 
+// SIPHash-2-4 function
 function sipHash128(message) {
     function rotl(v, offset, bits) {
         v[offset] = (v[offset] << bits) | (v[offset] >> (64n - bits));
@@ -60,10 +62,11 @@ function sipHash128(message) {
     compress(v);
     compress(v);
 
-    return ('00000000000000000000000000000000' + ((v[0] ^ v[1]) + ((v[2] ^ v[3]) << 64n)).toString(16)).substr(-32).
-        match(/../g).reverse().join('');
+    return ('00000000000000000000000000000000' + ((v[0] ^ v[1]) + ((v[2] ^ v[3]) << 64n)).toString(16)).substr(-32)
+        .match(/../g).reverse().join('');
 }
 
+// Get fingerprint from text
 function getFingerprint(text) {
     const matches = text.match(/\p{L}{4,100}/gu);
     if (!matches) return 'ffffffff';
@@ -76,26 +79,26 @@ function getFingerprint(text) {
         .reduce((min, curr) => curr < min ? curr : min, 'ffffffff');
 }
 
-async function encrypt(content, key) {
-    const aesKey = await window.crypto.subtle.importKey('raw', key, { name: 'AES-CTR', length: 128 }, false, ['encrypt']);
+// Encrypt content using AES-CTR
+async function aesEncrypt(content, key) {
+    const aesKey = await crypto.subtle.importKey('raw', key, { name: 'AES-CTR', length: 128 }, false, ['encrypt']);
     let plaintext = encoder.encode(content);
     let counter = new Uint8Array(16); // This is okay as long as the key is not reused.
-    let encrypted = new Uint8Array(await window.crypto.subtle.encrypt({ name: 'AES-CTR', counter: counter, length: 128 }, aesKey, plaintext));
+    let encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-CTR', counter: counter, length: 128 }, aesKey, plaintext));
     return btoa(String.fromCharCode(...encrypted));
 }
 
-async function decrypt(content, key) {
-    const aesKey = await window.crypto.subtle.importKey('raw', key, { name: 'AES-CTR', length: 128 }, false, ['decrypt']);
-    let ciphertext = Uint8Array.from(atob(content), c => c.charCodeAt(0));
+// Decrypt content using AES-CTR
+async function aesDecrypt(contentBase64, keyBytes) {
+    const aesKey = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-CTR', length: 128 }, false, ['decrypt']);
+    let ciphertext = Uint8Array.from(atob(contentBase64), c => c.charCodeAt(0));
     let counter = new Uint8Array(16); // This is okay as long as the key is not reused.
-    let decrypted = new Uint8Array(await window.crypto.subtle.decrypt({ name: 'AES-CTR', counter: counter, length: 128 }, aesKey, ciphertext));
+    let decrypted = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-CTR', counter: counter, length: 128 }, aesKey, ciphertext));
     return decoder.decode(decrypted);
 }
 
+// Load data from Clickhouse
 async function load(fingerprint, hash, type) {
-    const clickhouseUrl = "https://play.clickhouse.com/?user=paste";  // Adjust this URL as needed
-
-    // Construct the query
     const query = `
         SELECT content, is_encrypted
         FROM data
@@ -107,7 +110,6 @@ async function load(fingerprint, hash, type) {
     `;
 
     try {
-        // Fetch the data from Clickhouse
         const response = await fetch(clickhouseUrl, {
             method: 'POST',
             body: query,
@@ -121,8 +123,6 @@ async function load(fingerprint, hash, type) {
         }
 
         const responseText = await response.text();
-        // console.log("Response Text:", responseText);
-
         const json = JSON.parse(responseText);
 
         if (json.rows < 1) {
@@ -140,19 +140,17 @@ async function load(fingerprint, hash, type) {
                 return;
             }
             const keyBytes = base64ToBytes(key);
-            content = await decrypt(content, keyBytes);
+            content = await aesDecrypt(content, keyBytes);
         }
 
-
         return { content, prevHash: hash, prevFingerprint: fingerprint };
-
 
     } catch (e) {
         console.error("Error loading data:", e);
     }
 }
 
-// Helper functions (adjust as needed)
+// Convert base64 string to bytes
 function base64ToBytes(base64) {
     const binaryString = window.atob(base64);
     const len = binaryString.length;
@@ -163,29 +161,14 @@ function base64ToBytes(base64) {
     return bytes;
 }
 
-async function decrypt(contentBase64, keyBytes) {
-    const content = window.atob(contentBase64);
-    const decoder = new TextDecoder();
-    const encryptedBytes = new Uint8Array(content.length);
-    for (let i = 0; i < content.length; i++) {
-        encryptedBytes[i] = content.charCodeAt(i);
-    }
-
-    const algorithm = { name: 'AES-CTR', counter: new Uint8Array(16), length: 128 };
-    const key = await crypto.subtle.importKey('raw', keyBytes, algorithm, false, ['decrypt']);
-    const decryptedBytes = await crypto.subtle.decrypt(algorithm, key, encryptedBytes.buffer);
-    return decoder.decode(decryptedBytes);
-}
-
-
-
+// Save data to Clickhouse
 async function save(content, prevFingerprint, prevHash, isEncrypted) {
     let text = content;
     let anchor = '';
 
     if (isEncrypted) {
         const keyBytes = crypto.getRandomValues(new Uint8Array(16));
-        text = await encrypt(text, keyBytes);
+        text = await aesEncrypt(text, keyBytes);
         anchor = '#' + btoa(String.fromCharCode(...keyBytes));
     }
 
@@ -210,4 +193,4 @@ async function save(content, prevFingerprint, prevHash, isEncrypted) {
     return `${currFingerprint}/${currHash}${anchor}`;
 }
 
-export { load, save, encrypt, decrypt, getFingerprint, sipHash128 };
+export { load, save, aesEncrypt, aesDecrypt, getFingerprint, sipHash128 };
