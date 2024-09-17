@@ -193,4 +193,4 @@ async function save(content, prevFingerprint, prevHash, isEncrypted) {
     return `${currFingerprint}/${currHash}${anchor}`;
 }
 
-export { load, save, aesEncrypt, aesDecrypt, getFingerprint, sipHash128 };
+module.export = { load, save, aesEncrypt, aesDecrypt, getFingerprint, sipHash128 };

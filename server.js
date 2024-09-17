@@ -1,5 +1,5 @@
-import fastify from 'fastify';
-import { save, load } from './pastila.js'; // Import your functions here
+const fastify = require("fastify")({ logger: true });
+const { save, load } = require('./pastila.js'); // Import your functions here
 
 // Handle GET requests
 fastify.get("/:key", async (request, reply) => {
@@ -25,7 +25,7 @@ fastify.post("/:key", async (request, reply) => {
     if (data.length === 0) return reply.code(400).send({ error: "No data provided" });
 
     // Use the save function to save the data
-    const savedId = await save(data, key, key, false); // Adjust parameters if necessary
+    const savedId = await save(data, "quackpipe_" + key, key, false); // Adjust parameters if necessary
     return { success: true, id: savedId };
   } catch (error) {
     return reply.code(500).send({ error: "Error saving data" });
