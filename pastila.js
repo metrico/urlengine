@@ -35,8 +35,15 @@ function sipHash128(message) {
 
     const view = new DataView(message.buffer);
     let buf = new Uint8Array(new ArrayBuffer(8));
-    let v = new BigUint64Array([0x736f6d6570736575n, 0x646f72616e646f6dn, 0x6c7967656e657261n, 0x7465646279746573n]);
-
+    // let v = new BigUint64Array([0x736f6d6570736575n, 0x646f72616e646f6dn, 0x6c7967656e657261n, 0x7465646279746573n]);
+    // Example usage
+    let v  = new BigUint64ArrayPolyfill(4);
+    v.set(0, 0x736f6d6570736575n);
+    v.set(1, 0x646f72616e646f6dn);
+    v.set(2, 0x6c7967656e657261n);
+    v.set(3, 0x7465646279746573n);
+  
+  
     let offset = 0;
     for (; offset < message.length - 7; offset += 8) {
         let word = view.getBigUint64(offset, true);
@@ -194,3 +201,31 @@ async function save(content, prevFingerprint, prevHash, isEncrypted) {
 }
 
 module.export = { load, save, aesEncrypt, aesDecrypt, getFingerprint, sipHash128 };
+
+
+// Polyfill for BigUint64Array
+class BigUint64ArrayPolyfill {
+    constructor(length) {
+        this.length = length;
+        this.data = new Array(length).fill(0n); // Initialize with BigInt zeroes
+    }
+
+    get(index) {
+        if (index < 0 || index >= this.length) throw new RangeError('Index out of range');
+        return this.data[index];
+    }
+
+    set(index, value) {
+        if (index < 0 || index >= this.length) throw new RangeError('Index out of range');
+        if (typeof value !== 'bigint') throw new TypeError('Value must be a BigInt');
+        this.data[index] = value;
+    }
+    
+    // Example method to display the contents of the array
+    toString() {
+        return this.data.map(val => val.toString(16)).join(', ');
+    }
+}
+
+
+
