@@ -36,15 +36,16 @@ async function readFile(key, start, end) {
 
 async function writeFile(key, data) {
   const filePath = await getFilePath(key);
-  await fs.writeFile(filePath, data, 'binary'); // Ensure binary write
+  await fs.writeFile(filePath, data, 'binary');
 
-  // Log the file size and verify contents
-  const stats = await fs.stat(filePath);
-  console.log(`File saved: ${filePath}, Size: ${stats.size} bytes`);
+  // Verify the file header
+  const header = await readFile(key, 0, 19); // Read the first 20 bytes
+  console.log(`File header (hex): ${header.toString('hex')}`);
 
-  // Read first few bytes to check for DuckDB magic header
-  const buffer = await readFile(key, 0, 7); // Read first 8 bytes for the magic header
-  console.log('File header:', buffer.toString('utf-8')); // Should start with "DUCKDB"
+  // Check for the magic bytes and storage version
+  const magicBytes = header.slice(8, 12).toString('utf-8');
+  const version = header.readBigUInt64LE(12); // Read storage version as uint64_t
+  console.log(`Magic Bytes: ${magicBytes}, Storage Version: ${version}`);
 }
 
 // Helper function to handle range requests
@@ -74,10 +75,8 @@ async function handleRangeRequest(request, reply, key) {
       reply.header('Content-Length', chunkSize);
       reply.code(206); // Partial content
 
-      // Read file content with the range
       return await readFile(key, start, end);
     } else {
-      // Full file request
       reply.header('Content-Length', fileSize);
       reply.header('Accept-Ranges', 'bytes');
       return await readFile(key);
