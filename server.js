@@ -14,26 +14,29 @@ async function getFilePath(key) {
 async function readFile(key, start, end) {
   const filePath = await getFilePath(key);
   try {
-    console.log("reading: ", filePath);
     const fileHandle = await fs.open(filePath, 'r');
 
-    let data;
     if (start !== undefined && end !== undefined) {
       const buffer = Buffer.alloc(end - start + 1);
       await fileHandle.read(buffer, 0, end - start + 1, start);
-      data = buffer;
+      await fileHandle.close();
+      return buffer;
     } else {
-      data = await fileHandle.readFile();
+      const data = await fileHandle.readFile();
+      await fileHandle.close();
+      return data;
     }
-    
-    await fileHandle.close();
-    return data;
   } catch (error) {
     if (error.code === "ENOENT") {
       return null;
     }
     throw error;
   }
+}
+
+async function writeFile(key, data) {
+  const filePath = await getFilePath(key);
+  await fs.writeFile(filePath, data);
 }
 
 // Helper function to handle range requests
@@ -44,6 +47,7 @@ async function handleRangeRequest(request, reply, key) {
     const stats = await fs.stat(filePath);
     const fileSize = stats.size;
     const rangeHeader = request.headers.range;
+
     if (rangeHeader) {
       const parts = rangeHeader.replace(/bytes=/, "").split("-");
       const start = parts[0] ? parseInt(parts[0], 10) : 0;
@@ -61,7 +65,7 @@ async function handleRangeRequest(request, reply, key) {
       reply.header('Accept-Ranges', 'bytes');
       reply.header('Content-Length', chunkSize);
       reply.code(206); // Partial content
-      
+
       // Read file content with the range
       return await readFile(key, start, end);
     } else {
@@ -92,7 +96,7 @@ fastify.get("/:key", async (request, reply) => {
   reply.send(data);
 });
 
-// POST file
+// POST file (used for COPY INTO operation)
 fastify.post("/:key", async (request, reply) => {
   const { key } = request.params;
   if (!key) return reply.code(400).send({ error: "Key is required" });
@@ -102,12 +106,7 @@ fastify.post("/:key", async (request, reply) => {
   return { success: true };
 });
 
-async function writeFile(key, data) {
-  const filePath = await getFilePath(key);
-  await fs.writeFile(filePath, data);
-}
-
-// Custom parser for binary data
+// Custom parser for binary data (required for handling DuckDB file uploads)
 fastify.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => {
   done(null, body);
 });
