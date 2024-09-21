@@ -36,7 +36,15 @@ async function readFile(key, start, end) {
 
 async function writeFile(key, data) {
   const filePath = await getFilePath(key);
-  await fs.writeFile(filePath, data);
+  await fs.writeFile(filePath, data, 'binary'); // Ensure binary write
+
+  // Log the file size and verify contents
+  const stats = await fs.stat(filePath);
+  console.log(`File saved: ${filePath}, Size: ${stats.size} bytes`);
+
+  // Read first few bytes to check for DuckDB magic header
+  const buffer = await readFile(key, 0, 7); // Read first 8 bytes for the magic header
+  console.log('File header:', buffer.toString('utf-8')); // Should start with "DUCKDB"
 }
 
 // Helper function to handle range requests
