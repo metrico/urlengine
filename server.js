@@ -11,35 +11,30 @@ async function getFilePath(key) {
   return path.join(DB_DIR, `${key}`);
 }
 
+// Function to read the file
 async function readFile(key, start, end) {
   const filePath = await getFilePath(key);
-  try {
-    const fileHandle = await fs.open(filePath, 'r');
+  const fileHandle = await fs.open(filePath, 'r');
 
-    if (start !== undefined && end !== undefined) {
-      const buffer = Buffer.alloc(end - start + 1);
-      await fileHandle.read(buffer, 0, end - start + 1, start);
-      await fileHandle.close();
-      return buffer;
-    } else {
-      const data = await fileHandle.readFile();
-      await fileHandle.close();
-      return data;
-    }
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      return null;
-    }
-    throw error;
+  if (start !== undefined && end !== undefined) {
+    const buffer = Buffer.alloc(end - start + 1);
+    await fileHandle.read(buffer, 0, end - start + 1, start);
+    await fileHandle.close();
+    return buffer;
+  } else {
+    const data = await fileHandle.readFile();
+    await fileHandle.close();
+    return data;
   }
 }
 
+// Function to write the file
 async function writeFile(key, data) {
   const filePath = await getFilePath(key);
-  await fs.writeFile(filePath, data, 'binary');
+  await fs.writeFile(filePath, data);
 }
 
-// Helper function to handle range requests
+// Handle range requests
 async function handleRangeRequest(request, reply, key) {
   const filePath = await getFilePath(key);
 
@@ -53,9 +48,7 @@ async function handleRangeRequest(request, reply, key) {
       const start = parts[0] ? parseInt(parts[0], 10) : 0;
       const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
 
-      // Validate the range
       if (isNaN(start) || isNaN(end) || start >= fileSize || end >= fileSize || start > end) {
-        reply.header('Content-Range', `bytes */${fileSize}`);
         reply.code(416).send({ error: "Range Not Satisfiable" });
         return null;
       }
@@ -85,12 +78,12 @@ async function handleRangeRequest(request, reply, key) {
 fastify.get("/:key", async (request, reply) => {
   const { key } = request.params;
   if (!key) return reply.code(400).send();
-  
+
   const data = await handleRangeRequest(request, reply, key);
   if (data === null) {
     return; // 404 or 416 already sent in handleRangeRequest
   }
-  
+
   reply.send(data);
 });
 
@@ -102,6 +95,25 @@ fastify.post("/:key", async (request, reply) => {
   const data = await request.body;
   await writeFile(key, data);
   return { success: true };
+});
+
+// HEAD file
+fastify.head("/:key", async (request, reply) => {
+  const { key } = request.params;
+  if (!key) return reply.code(400).send();
+
+  const filePath = await getFilePath(key);
+  try {
+    const stats = await fs.stat(filePath);
+    reply.header('Content-Length', stats.size);
+    reply.code(200).send();
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      reply.code(404).send({ error: "Not found" });
+      return null;
+    }
+    throw error;
+  }
 });
 
 // Custom parser for binary data
@@ -121,4 +133,3 @@ const start = async () => {
 };
 
 start();
-
