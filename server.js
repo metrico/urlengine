@@ -11,33 +11,29 @@ async function getFilePath(key) {
   return path.join(DB_DIR, `${key}`);
 }
 
-// Function to read the file
-async function readFile(key, start, end) {
-  const filePath = await getFilePath(key);
+async function readFile(filePath, start, end) {
   const fileHandle = await fs.open(filePath, 'r');
-
-  if (start !== undefined && end !== undefined) {
-    const buffer = Buffer.alloc(end - start + 1);
-    await fileHandle.read(buffer, 0, end - start + 1, start);
+  try {
+    if (start !== undefined && end !== undefined) {
+      const buffer = Buffer.alloc(end - start + 1);
+      await fileHandle.read(buffer, 0, end - start + 1, start);
+      return buffer;
+    } else {
+      return await fileHandle.readFile();
+    }
+  } finally {
     await fileHandle.close();
-    return buffer;
-  } else {
-    const data = await fileHandle.readFile();
-    await fileHandle.close();
-    return data;
   }
 }
 
-// Function to write the file
 async function writeFile(key, data) {
   const filePath = await getFilePath(key);
   await fs.writeFile(filePath, data);
 }
 
-// Handle range requests
 async function handleRangeRequest(request, reply, key) {
   const filePath = await getFilePath(key);
-
+  
   try {
     const stats = await fs.stat(filePath);
     const fileSize = stats.size;
@@ -45,7 +41,7 @@ async function handleRangeRequest(request, reply, key) {
 
     if (rangeHeader) {
       const parts = rangeHeader.replace(/bytes=/, "").split("-");
-      const start = parts[0] ? parseInt(parts[0], 10) : 0;
+      const start = parseInt(parts[0], 10);
       const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
 
       if (isNaN(start) || isNaN(end) || start >= fileSize || end >= fileSize || start > end) {
@@ -57,13 +53,12 @@ async function handleRangeRequest(request, reply, key) {
       reply.header('Content-Range', `bytes ${start}-${end}/${fileSize}`);
       reply.header('Accept-Ranges', 'bytes');
       reply.header('Content-Length', chunkSize);
-      reply.code(206); // Partial content
-
-      return await readFile(key, start, end);
+      reply.code(206);
+      return await readFile(filePath, start, end);
     } else {
       reply.header('Content-Length', fileSize);
       reply.header('Accept-Ranges', 'bytes');
-      return await readFile(key);
+      return await readFile(filePath);
     }
   } catch (error) {
     if (error.code === "ENOENT") {
@@ -74,46 +69,26 @@ async function handleRangeRequest(request, reply, key) {
   }
 }
 
-// GET file
+/** GET file */
 fastify.get("/:key", async (request, reply) => {
   const { key } = request.params;
-  if (!key) return reply.code(400).send();
-
+  if (!key) return reply.code(400).send({ error: "Key is required" });
+  
   const data = await handleRangeRequest(request, reply, key);
-  if (data === null) {
-    return; // 404 or 416 already sent in handleRangeRequest
-  }
-
+  if (data === null) return; // 404 or 416 already sent in handleRangeRequest
+  
+  reply.header('Content-Type', 'application/octet-stream');
   reply.send(data);
 });
 
-// POST file
+/** POST file */
 fastify.post("/:key", async (request, reply) => {
   const { key } = request.params;
   if (!key) return reply.code(400).send({ error: "Key is required" });
-
+  
   const data = await request.body;
   await writeFile(key, data);
   return { success: true };
-});
-
-// HEAD file
-fastify.head("/:key", async (request, reply) => {
-  const { key } = request.params;
-  if (!key) return reply.code(400).send();
-
-  const filePath = await getFilePath(key);
-  try {
-    const stats = await fs.stat(filePath);
-    reply.header('Content-Length', stats.size);
-    reply.code(200).send();
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      reply.code(404).send({ error: "Not found" });
-      return null;
-    }
-    throw error;
-  }
 });
 
 // Custom parser for binary data
@@ -131,5 +106,4 @@ const start = async () => {
     process.exit(1);
   }
 };
-
 start();
