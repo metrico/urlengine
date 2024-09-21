@@ -1,8 +1,8 @@
 {
-  "name": "duckdb-url-engine",
+  "name": "duckdb-urlengine",
   "author": "L. Mangani <lorenzo.mangani@gmail.com>",
   "version": "1.0.1",
-  "description": "Clickhouse URL Engine service example",
+  "description": "DuckDB URL Engine service example",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
