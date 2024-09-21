@@ -1,22 +1,31 @@
 const fastify = require("fastify")({ logger: true });
 const fs = require("fs").promises;
 const path = require("path");
-
-const STORAGE_DIR = path.join(__dirname, "/tmp/storage");
+const DB_DIR = path.join(__dirname, "./tmp");
 
 // Ensure storage directory exists
-fs.mkdir(STORAGE_DIR, { recursive: true }).catch(console.error);
+fs.mkdir(DB_DIR, { recursive: true }).catch(console.error);
 
 async function getFilePath(key) {
-  return path.join(STORAGE_DIR, `${key}.json`);
+  return path.join(DB_DIR, `${key}.db`);
 }
 
-async function readFile(key) {
+async function readFile(key, start, end) {
   const filePath = await getFilePath(key);
   try {
     console.log("reading: ", filePath);
-    const data = await fs.readFile(filePath, "utf8");
-    return JSON.parse(data);
+    const fileHandle = await fs.open(filePath, 'r');
+    
+    if (start !== undefined && end !== undefined) {
+      const buffer = Buffer.alloc(end - start + 1);
+      await fileHandle.read(buffer, 0, end - start + 1, start);
+      await fileHandle.close();
+      return buffer;
+    } else {
+      const data = await fileHandle.readFile();
+      await fileHandle.close();
+      return data;
+    }
   } catch (error) {
     if (error.code === "ENOENT") {
       return null;
@@ -27,73 +36,78 @@ async function readFile(key) {
 
 async function writeFile(key, data) {
   const filePath = await getFilePath(key);
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf8");
+  await fs.writeFile(filePath, data);
 }
 
-/** CLICKHOUSE URL SELECT */
+// Helper function to handle range requests
+async function handleRangeRequest(request, reply, key) {
+  const filePath = await getFilePath(key);
+  
+  try {
+    const stats = await fs.stat(filePath);
+    const fileSize = stats.size;
+    const rangeHeader = request.headers.range;
+
+    if (rangeHeader) {
+      const parts = rangeHeader.replace(/bytes=/, "").split("-");
+      const start = parts[0] ? parseInt(parts[0], 10) : 0;
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+      if (isNaN(start) || isNaN(end) || start >= fileSize || end >= fileSize || start > end) {
+        reply.code(416).send({ error: "Range Not Satisfiable" });
+        return null;
+      }
+
+      const chunkSize = (end - start) + 1;
+      reply.header('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+      reply.header('Accept-Ranges', 'bytes');
+      reply.header('Content-Length', chunkSize);
+      reply.code(206);
+
+      return await readFile(key, start, end);
+    } else {
+      reply.header('Content-Length', fileSize);
+      reply.header('Accept-Ranges', 'bytes');
+      return await readFile(key);
+    }
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      reply.code(404).send({ error: "Not found" });
+      return null;
+    }
+    throw error;
+  }
+}
+
+/** GET DuckDB file */
 fastify.get("/:key", async (request, reply) => {
   const { key } = request.params;
   if (!key) return reply.code(400).send();
 
-  const data = await readFile(key);
+  const data = await handleRangeRequest(request, reply, key);
   if (data === null) {
-    return reply.code(404).send({ error: "Not found" });
+    return; // 404 already sent in handleRangeRequest
   }
+  reply.header('Content-Type', 'application/octet-stream');
   return data;
 });
 
-/** CLICKHOUSE URL INSERT */
+/** POST DuckDB file */
 fastify.post("/:key", async (request, reply) => {
   const { key } = request.params;
   if (!key) return reply.code(400).send({ error: "Key is required" });
-
-  const data = Array.isArray(request.body) ? request.body : [request.body];
-  if (data.length == 0) return;
+  
+  const data = await request.body;
   await writeFile(key, data);
   return { success: true };
 });
 
-/**
- * @param req {FastifyRequest}
- * @returns {Promise<Buffer>}
- */
-async function getRawBody(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.raw.on("data", (chunk) => chunks.push(chunk));
-    req.raw.on("end", () => resolve(Buffer.concat(chunks)));
-    req.raw.on("error", reject);
-  });
-}
+// Custom parser for raw binary data
+fastify.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => {
+  done(null, body);
+});
 
-/**
- * @param req {FastifyRequest}
- * @returns {Promise<object[]>}
- */
-async function octetStreamParser(req) {
-  try {
-    const buffer = await getRawBody(req);
-    const jsonString = buffer.toString("utf8");
-    if (jsonString.trim().length === 0) {
-      return [];
-    }
-    // Split the string into lines and parse each line as JSON
-    const jsonObjects = jsonString
-      .trim()
-      .split("\n")
-      .map((line) => JSON.parse(line));
-    return jsonObjects;
-  } catch (err) {
-    req.log.error("Error parsing octet-stream:", err);
-    err.statusCode = 400;
-    throw err;
-  }
-}
-
-// Add a custom parser for 'application/octet-stream'
-fastify.addContentTypeParser("application/octet-stream", octetStreamParser);
-
-/** RUN URL Engine */
+/** RUN Server */
 const start = async () => {
   try {
     await fastify.listen({ port: process.env.PORT || 3000, host: "0.0.0.0" });
