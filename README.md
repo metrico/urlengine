@@ -2,21 +2,20 @@
 This basic example illustrates a simple [URL Table Engine](https://DuckDB.com/docs/en/engines/table-engines/special/url/) server for DuckDB
 
 ##### ⏱️ Why
-> DuckDB is super fast and already has all the functions one could dream. What is this for?
 
-This example is designed to understand the underlying formats and unleash imagination for integrators.
+This basic example is designed for DuckDB HTTPFS remote read/write integrations.
 
 ```mermaid
 sequenceDiagram
     autonumber
     DuckDB->>NodeJS: POST Request
     loop Javascript
-        NodeJS->>NodeJS: INSERT
+        NodeJS->>NodeJS: WRITE
     end
     NodeJS-->>DuckDB: POST Response
     DuckDB->>NodeJS: GET Request
     loop Javascript
-        NodeJS->>NodeJS: SELECT
+        NodeJS->>NodeJS: READ
     end
     NodeJS-->>DuckDB: GET Response
 ```
