@@ -1,31 +1,29 @@
-<img src="https://user-images.githubusercontent.com/1423657/147935343-598c7dfd-1412-4bad-9ac6-636994810443.png" width=220 >
-
-# ClickHouse NodeJS URL Engine
-This basic example illustrates a simple NodeJS [URL Table Engine](https://clickhouse.com/docs/en/engines/table-engines/special/url/) server for Clickhouse
+# DuckDB URL Engine
+This basic example illustrates a simple [URL Table Engine](https://DuckDB.com/docs/en/engines/table-engines/special/url/) server for DuckDB
 
 ##### ⏱️ Why
-> Clickhouse is super fast and already has all the functions one could dream. What is this for?
+> DuckDB is super fast and already has all the functions one could dream. What is this for?
 
 This example is designed to understand the underlying formats and unleash imagination for integrators.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    ClickHouse->>NodeJS: POST Request
+    DuckDB->>NodeJS: POST Request
     loop Javascript
         NodeJS->>NodeJS: INSERT
     end
-    NodeJS-->>ClickHouse: POST Response
-    ClickHouse->>NodeJS: GET Request
+    NodeJS-->>DuckDB: POST Response
+    DuckDB->>NodeJS: GET Request
     loop Javascript
         NodeJS->>NodeJS: SELECT
     end
-    NodeJS-->>ClickHouse: GET Response
+    NodeJS-->>DuckDB: GET Response
 ```
 
 ##### Features
-- [x] INSERT to JS array
-- [x] SELECT from JS array
+- [x] INSERT Files via POST
+- [x] SELECT Files via GET
 
 #### Setup
 Install and run the example service :
@@ -34,7 +32,22 @@ npm install
 npm start
 ```
 
-#### 📦 Clickhouse
+#### 📦 DuckDB
+
+You can COPY and SELECT from the URL Engine using extensions `json`,`csv`,`parquet`
+```
+D COPY (SELECT version() as version, 9999 as number) TO 'https://duckserver.glitch.me/test.parquet';
+D SELECT * FROM read_json_auto('https://duckserver.glitch.me/test.parquet');
+┌─────────┬────────┐
+│ version │ number │
+│ varchar │ int64  │
+├─────────┼────────┤
+│ v1.1.0  │   9999 │
+└─────────┴────────┘
+```
+
+
+#### 📦 ClickHouse
 Create a `url_engine_table` table pointed at our service :
 ```sql
 CREATE TABLE url_engine_node
