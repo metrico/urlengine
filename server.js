@@ -37,15 +37,6 @@ async function readFile(key, start, end) {
 async function writeFile(key, data) {
   const filePath = await getFilePath(key);
   await fs.writeFile(filePath, data, 'binary');
-
-  // Verify the file header
-  const header = await readFile(key, 0, 19); // Read the first 20 bytes
-  console.log(`File header (hex): ${header.toString('hex')}`);
-
-  // Check for the magic bytes and storage version
-  const magicBytes = header.slice(8, 12).toString('utf-8');
-  const version = header.readBigUInt64LE(12); // Read storage version as uint64_t
-  console.log(`Magic Bytes: ${magicBytes}, Storage Version: ${version}`);
 }
 
 // Helper function to handle range requests
@@ -103,7 +94,7 @@ fastify.get("/:key", async (request, reply) => {
   reply.send(data);
 });
 
-// POST file (used for COPY INTO operation)
+// POST file
 fastify.post("/:key", async (request, reply) => {
   const { key } = request.params;
   if (!key) return reply.code(400).send({ error: "Key is required" });
@@ -113,7 +104,7 @@ fastify.post("/:key", async (request, reply) => {
   return { success: true };
 });
 
-// Custom parser for binary data (required for handling DuckDB file uploads)
+// Custom parser for binary data
 fastify.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => {
   done(null, body);
 });
@@ -130,3 +121,4 @@ const start = async () => {
 };
 
 start();
+
