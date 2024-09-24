@@ -11,21 +11,22 @@ A public demo instance is available at [https://duckserver.glitch.me](https://du
 ```mermaid
 sequenceDiagram
     autonumber
-    DuckDB->>NodeJS: POST Request
-    loop Javascript
-        NodeJS->>NodeJS: WRITE
+    DuckDB->>DuckServer: POST Request
+    loop Storage
+        DuckServer->>DuckServer: WRITE FILE
     end
-    NodeJS-->>DuckDB: POST Response
-    DuckDB->>NodeJS: GET Request
-    loop Javascript
-        NodeJS->>NodeJS: READ
+    DuckServer-->>DuckDB: POST Response
+    DuckDB->>DuckServer: GET Request
+    loop Storage
+        DuckServer->>DuckServer: READ FILE
     end
-    NodeJS-->>DuckDB: GET Response
+    DuckServer-->>DuckDB: GET Response
 ```
 
 ##### Features
 - [x] INSERT Files via POST
-- [x] SELECT Files via GET
+- [x] SELECT Files via GET/HEAD
+- [x] HTTP RANGE Support
 
 #### Usage
 ##### Golang
