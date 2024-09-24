@@ -12,6 +12,7 @@ permissions:
 
 on:
   release:
+    types: [released]
 
 jobs:
 
@@ -29,7 +30,7 @@ jobs:
       run: |
            cd go
            go mod tidy
-           go build -v -o duckserver main.go
+           go build -v -o duckserver server.go
 
     - name: Upload Release Binary
       uses: alexellis/upload-assets@0.4.0
