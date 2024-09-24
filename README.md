@@ -84,10 +84,10 @@ D SELECT * FROM parquet_schema('https://duckserver.glitch.me/test.parquet');
 ```
 
 
-#### 📦 DuckDB
+#### 📦 ClickHouse
 ```sql
-SELECT * FROM url('http://urleng:3000/*/data.parquet', PARQUET) FORMAT JSONCompact;
+INSERT INTO FUNCTION url('http://urleng:3000/click.parquet', 'PARQUET', 'column1 String, column2 UInt32') VALUES ('http interface', 42);
+
+SELECT * FROM url('http://urleng:3000/click.parquet', PARQUET) FORMAT JSONCompact;
 ```
-```json
-{ "meta": [ { "name": "version", "type": "Nullable(String)" }, { "name": "number", "type": "Nullable(Int32)" } ], "data": [ ["v1.1.0", 9999] ], "rows": 1, "statistics": { "elapsed": 0.048108343, "rows_read": 0, "bytes_read": 0 } }
-```
+
