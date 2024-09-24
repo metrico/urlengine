@@ -194,7 +194,9 @@ func handleExactPathRequest(c *gin.Context, info HivePathInfo) {
 	}
 
 	if fileInfo.IsDir() {
-		handleDirectory(c, filePath)
+		// handleDirectory(c, filePath)
+		// Return an empty response for directory requests
+		c.String(http.StatusOK, "")
 	} else {
 		handleSingleFile(c, filePath)
 	}
