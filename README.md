@@ -1,4 +1,4 @@
-<img src="https://github.com/user-attachments/assets/f8d31845-98c1-4f8e-b659-90c499818bc6" width=400 />
+<img src="https://github.com/user-attachments/assets/f8d31845-98c1-4f8e-b659-90c499818bc6" width=300 />
 
 
 # DuckDB URL Engine
