@@ -5,7 +5,7 @@
 This basic example is designed to explore [DuckDB HTTPFS](https://duckdb.org/docs/extensions/httpfs/https.html) remote read/write integrations.
 
 ### Demo
-A public demo instance is available at [https://duckserver.glitch.me](https://duckserver.glitch.me)
+A public demo instance is available at [https://urleng.glitch.me](https://urleng.glitch.me)
 
 
 ```mermaid
@@ -52,8 +52,8 @@ You can COPY and SELECT from the URL Engine using extensions `json`,`csv`,`parqu
 ```sql
 D SET enable_http_write = 1;
 
-D COPY (SELECT version() as version, 9999 as number) TO 'https://duckserver.glitch.me/test.json';
-D SELECT * FROM read_json_auto('https://duckserver.glitch.me/test.json');
+D COPY (SELECT version() as version, 9999 as number) TO 'https://urleng.glitch.me/test.json';
+D SELECT * FROM read_json_auto('https://urleng.glitch.me/test.json');
 ┌─────────┬────────┐
 │ version │ number │
 │ varchar │ int64  │
@@ -61,8 +61,8 @@ D SELECT * FROM read_json_auto('https://duckserver.glitch.me/test.json');
 │ v1.1.0  │   9999 │
 └─────────┴────────┘
 
-D COPY (SELECT version() as version, 9999 as number) TO 'https://duckserver.glitch.me/test.parquet';
-D SELECT * FROM read_parquet('https://duckserver.glitch.me/test.parquet');
+D COPY (SELECT version() as version, 9999 as number) TO 'https://urleng.glitch.me/test.parquet';
+D SELECT * FROM read_parquet('https://urleng.glitch.me/test.parquet');
 ┌─────────┬────────┐
 │ version │ number │
 │ varchar │ int64  │
@@ -70,7 +70,7 @@ D SELECT * FROM read_parquet('https://duckserver.glitch.me/test.parquet');
 │ v1.1.0  │   9999 │
 └─────────┴────────┘
 
-D SELECT * FROM parquet_schema('https://duckserver.glitch.me/test.parquet');
+D SELECT * FROM parquet_schema('https://urleng.glitch.me/test.parquet');
 ┌──────────────────────┬───────────────┬────────────┬─────────────┬───┬────────────────┬───────┬───────────┬──────────┬──────────────┐
 │      file_name       │     name      │    type    │ type_length │ … │ converted_type │ scale │ precision │ field_id │ logical_type │
 │       varchar        │    varchar    │  varchar   │   varchar   │   │    varchar     │ int64 │   int64   │  int64   │   varchar    │
@@ -87,11 +87,11 @@ D SELECT * FROM parquet_schema('https://duckserver.glitch.me/test.parquet');
 #### 📦 ClickHouse
 ##### INSERT
 ```sql
-INSERT INTO FUNCTION url('http://urleng:3000/click.parquet', 'PARQUET', 'column1 String, column2 UInt32') VALUES (version(), 999);
+INSERT INTO FUNCTION url('https://urleng.glitch.me/click.parquet', 'PARQUET', 'column1 String, column2 UInt32') VALUES (version(), 999);
 ```
 ##### SELECT
 ```sql
-SELECT * FROM url('http://urleng:3000/click.parquet', PARQUET) FORMAT Pretty;
+SELECT * FROM url('https://urleng.glitch.me/click.parquet', PARQUET) FORMAT Pretty;
 
    ┏━━━━━━━━━━┳━━━━━━━━┓
    ┃ version  ┃ number ┃
@@ -102,7 +102,7 @@ SELECT * FROM url('http://urleng:3000/click.parquet', PARQUET) FORMAT Pretty;
 
 ##### DESCRIBE
 ```sql
-DESCRIBE TABLE url('http://duckserver.glitch.me/click', PARQUET) FORMAT Pretty;
+DESCRIBE TABLE url('http://https://urleng.glitch.me/click.parquet', PARQUET) FORMAT Pretty;
 
    ┏━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┓
    ┃ name    ┃ type             ┃ default_type ┃ default_expression ┃ comment ┃ codec_expression ┃ ttl_expression ┃
