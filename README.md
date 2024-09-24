@@ -44,6 +44,7 @@ npm install
 PORT=80 npm start
 ```
 
+### Examples
 #### 📦 DuckDB
 
 You can COPY and SELECT from the URL Engine using extensions `json`,`csv`,`parquet`
@@ -82,3 +83,11 @@ D SELECT * FROM parquet_schema('https://duckserver.glitch.me/test.parquet');
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
+
+#### 📦 DuckDB
+```sql
+SELECT * FROM url('http://urleng:3000/*/data.parquet', PARQUET) FORMAT JSONCompact;
+```
+```json
+{ "meta": [ { "name": "version", "type": "Nullable(String)" }, { "name": "number", "type": "Nullable(Int32)" } ], "data": [ ["v1.1.0", 9999] ], "rows": 1, "statistics": { "elapsed": 0.048108343, "rows_read": 0, "bytes_read": 0 } }
+```
