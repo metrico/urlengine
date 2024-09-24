@@ -7,22 +7,6 @@ This basic example is designed to explore [DuckDB HTTPFS](https://duckdb.org/doc
 ### Demo
 A public demo instance is available at [https://urleng.glitch.me](https://urleng.glitch.me)
 
-
-```mermaid
-sequenceDiagram
-    autonumber
-    DuckDB->>DuckServer: POST Request
-    loop Storage
-        DuckServer->>DuckServer: WRITE FILE
-    end
-    DuckServer-->>DuckDB: POST Response
-    DuckDB->>DuckServer: GET Request
-    loop Storage
-        DuckServer->>DuckServer: READ FILE
-    end
-    DuckServer-->>DuckDB: GET Response
-```
-
 ##### Features
 - [x] INSERT Files via POST
 - [x] SELECT Files via GET/HEAD
@@ -111,4 +95,28 @@ DESCRIBE TABLE url('http://https://urleng.glitch.me/click.parquet', PARQUET) FOR
    ├─────────┼──────────────────┼──────────────┼────────────────────┼─────────┼──────────────────┼────────────────┤
 2. │ number  │ Nullable(UInt32) │              │                    │         │                  │                │
    └─────────┴──────────────────┴──────────────┴────────────────────┴─────────┴──────────────────┴────────────────┘
+```
+##### SET PARAM
+```sql
+SET param_url = 'https://urleng.glitch.me/your_secret_token';
+INSERT INTO FUNCTION url({url﻿:String}, JSONEachRow, 'key String, value UInt64') VALUES ('hello', 1);
+SELECT * FROM url({url:String}, JSONEachRow);
+```
+
+
+### Design Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    DuckDB->>DuckServer: POST Request
+    loop Storage
+        DuckServer->>DuckServer: WRITE FILE
+    end
+    DuckServer-->>DuckDB: POST Response
+    DuckDB->>DuckServer: GET Request
+    loop Storage
+        DuckServer->>DuckServer: READ FILE
+    end
+    DuckServer-->>DuckDB: GET Response
 ```
