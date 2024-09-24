@@ -30,7 +30,14 @@ jobs:
       run: |
            cd go
            go mod tidy
-           go build -v -o duckserver server.go
+           CGO_ENABLED=0 go build -v -o duckserver server.go
+           
+    - name: Patch glibc for backwards compatibility
+      uses: lmangani/polyfill-glibc-action@main
+      id: polyfill
+      with:
+          glibc: "2.28"
+          target: "./go/duckserver"
 
     - name: Upload Release Binary
       uses: alexellis/upload-assets@0.4.0
