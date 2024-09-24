@@ -2,7 +2,7 @@
 
 
 # DuckDB URL Engine
-This basic example is designed to explore [DuckDB HTTPFS](https://duckdb.org/docs/extensions/httpfs/https.html) remote read/write integrations.
+The URL Engine provides format agnostic remote storage for DuckDB/Clickhouse with hive-style partitioning.<br>
 
 ### Demo
 A public demo instance is available at [https://urleng.glitch.me](https://urleng.glitch.me)
