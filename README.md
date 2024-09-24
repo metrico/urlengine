@@ -26,11 +26,20 @@ sequenceDiagram
 - [x] INSERT Files via POST
 - [x] SELECT Files via GET
 
-#### Setup
+#### Usage
+##### Golang
 Install and run the example service :
 ```
+cd go/
+go mod tidy
+PORT=80 go run server.go
+```
+##### NodeJS
+Install and run the example service :
+```
+cd nodejs/
 npm install
-npm start
+PORT=80 npm start
 ```
 
 #### 📦 DuckDB
