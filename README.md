@@ -29,8 +29,8 @@ You can COPY and SELECT from the URL Engine using extensions `json`,`csv`,`parqu
 ```sql
 D SET enable_http_write = 1;
 
-D COPY (SELECT version() as version, 9999 as number) TO 'https://urleng.com/test.json';
-D SELECT * FROM read_json_auto('https://urleng.com/test.json');
+D COPY (SELECT version() as version, 9999 as number) TO 'https://urleng.glitch.me/test.json';
+D SELECT * FROM read_json_auto('https://urleng.glitch.me/test.json');
 ┌─────────┬────────┐
 │ version │ number │
 │ varchar │ int64  │
@@ -38,8 +38,8 @@ D SELECT * FROM read_json_auto('https://urleng.com/test.json');
 │ v1.1.0  │   9999 │
 └─────────┴────────┘
 
-D COPY (SELECT version() as version, 9999 as number) TO 'https://urleng.com/test.parquet';
-D SELECT * FROM read_parquet('https://urleng.com/test.parquet');
+D COPY (SELECT version() as version, 9999 as number) TO 'https://urleng.glitch.me/test.parquet';
+D SELECT * FROM read_parquet('https://urleng.glitch.me/test.parquet');
 ┌─────────┬────────┐
 │ version │ number │
 │ varchar │ int64  │
@@ -47,7 +47,7 @@ D SELECT * FROM read_parquet('https://urleng.com/test.parquet');
 │ v1.1.0  │   9999 │
 └─────────┴────────┘
 
-D SELECT * FROM parquet_schema('https://urleng.com/test.parquet');
+D SELECT * FROM parquet_schema('https://urleng.glitch.me/test.parquet');
 ┌──────────────────────┬───────────────┬────────────┬─────────────┬───┬────────────────┬───────┬───────────┬──────────┬──────────────┐
 │      file_name       │     name      │    type    │ type_length │ … │ converted_type │ scale │ precision │ field_id │ logical_type │
 │       varchar        │    varchar    │  varchar   │   varchar   │   │    varchar     │ int64 │   int64   │  int64   │   varchar    │
@@ -75,11 +75,11 @@ CREATE SECRET extra_http_headers (
 #### 📦 ClickHouse
 ##### INSERT
 ```sql
-INSERT INTO FUNCTION url('https://urleng.com/click.parquet', 'PARQUET', 'column1 String, column2 UInt32') VALUES (version(), 999);
+INSERT INTO FUNCTION url('https://urleng.glitch.me/click.parquet', 'PARQUET', 'column1 String, column2 UInt32') VALUES (version(), 999);
 ```
 ##### SELECT
 ```sql
-SELECT * FROM url('https://urleng.com/click.parquet', PARQUET) FORMAT Pretty;
+SELECT * FROM url('https://urleng.glitch.me/click.parquet', PARQUET) FORMAT Pretty;
 
    ┏━━━━━━━━━━┳━━━━━━━━┓
    ┃ version  ┃ number ┃
@@ -90,7 +90,7 @@ SELECT * FROM url('https://urleng.com/click.parquet', PARQUET) FORMAT Pretty;
 
 ##### DESCRIBE
 ```sql
-DESCRIBE TABLE url('http://https://urleng.com/click.parquet', PARQUET) FORMAT Pretty;
+DESCRIBE TABLE url('http://https://urleng.glitch.me/click.parquet', PARQUET) FORMAT Pretty;
 
    ┏━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┓
    ┃ name    ┃ type             ┃ default_type ┃ default_expression ┃ comment ┃ codec_expression ┃ ttl_expression ┃
@@ -102,7 +102,7 @@ DESCRIBE TABLE url('http://https://urleng.com/click.parquet', PARQUET) FORMAT Pr
 ```
 ##### SET PARAM
 ```sql
-SET param_url = 'https://urleng.com/your_secret_token';
+SET param_url = 'https://urleng.glitch.me/your_secret_token';
 INSERT INTO FUNCTION url({url﻿:String}, JSONEachRow, 'key String, value UInt64') VALUES ('hello', 1);
 SELECT * FROM url({url:String}, JSONEachRow);
 ```
