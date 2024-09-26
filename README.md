@@ -67,6 +67,17 @@ D SELECT * FROM parquet_schema('https://urleng.glitch.me/test.parquet');
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
+##### HTTP/S HEADERS
+```sql
+CREATE SECRET extra_http_headers (
+    TYPE HTTP, 
+    EXTRA_HTTP_HEADERS MAP{
+		'Authorization': 'Bearer ${SOME_TOKEN}',
+		'CustomHeader': 'abc123'
+	}
+);
+```
+
 
 #### 📦 ClickHouse
 ##### INSERT
@@ -102,6 +113,7 @@ SET param_url = 'https://urleng.glitch.me/your_secret_token';
 INSERT INTO FUNCTION url({url﻿:String}, JSONEachRow, 'key String, value UInt64') VALUES ('hello', 1);
 SELECT * FROM url({url:String}, JSONEachRow);
 ```
+
 
 
 ### Design Flow
