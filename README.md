@@ -20,13 +20,6 @@ cd go/
 go mod tidy
 PORT=80 go run server.go
 ```
-##### NodeJS
-Install and run the example NodeJS service :
-```
-cd nodejs/
-npm install
-PORT=80 npm start
-```
 
 ### Examples
 #### 📦 DuckDB
