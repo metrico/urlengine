@@ -36,7 +36,7 @@ jobs:
       run: |
            cd go
            go mod tidy
-           CGO_ENABLED=0 go build -v -o duckserver_magic server_magic.go
+           go build -v -o duckserver_magic server_magic.go
            
     - name: Patch glibc for backwards compatibility
       uses: lmangani/polyfill-glibc-action@1.1.2
