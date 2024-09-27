@@ -31,6 +31,12 @@ jobs:
            cd go
            go mod tidy
            CGO_ENABLED=0 go build -v -o duckserver server.go
+
+    - name: Build GO Magic
+      run: |
+           cd go
+           go mod tidy
+           CGO_ENABLED=0 go build -v -o duckserver_magic server_magic.go
            
     - name: Patch glibc for backwards compatibility
       uses: lmangani/polyfill-glibc-action@1.1.1
@@ -45,4 +51,4 @@ jobs:
       env:
           GITHUB_TOKEN: ${{ github.token }}
       with:
-          asset_paths: '["./go/duckserver"]'
+          asset_paths: '["./go/duckserver", "./go/duckserver_magic"]'
