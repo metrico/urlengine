@@ -41,7 +41,7 @@ jobs:
     - name: Patch glibc for backwards compatibility
       uses: lmangani/polyfill-glibc-action@1.1.2
       continue-on-error: true
-      id: polyfill1
+      id: polyfill
       with:
         glibc: "2.28"
         target: "/github/workspace/go/duckserver"
@@ -49,9 +49,8 @@ jobs:
     - name: Patch glibc for backwards compatibility
       uses: lmangani/polyfill-glibc-action@1.1.2
       continue-on-error: true
-      id: polyfill2
       with:
-        glibc: "2.28"
+        glibc: "2.27"
         target: "/github/workspace/go/duckserver_magic"
         
     - name: Upload Release Binary
