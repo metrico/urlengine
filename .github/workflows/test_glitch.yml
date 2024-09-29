@@ -1,0 +1,16 @@
+name: URLEng Test
+# This workflow is triggered at a scheduled interval of every 30 minutes
+on:
+  schedule:
+    - cron:  '0 0 * * *'
+
+jobs:
+  pinger_job:
+    name: A job to ping
+    runs-on: ubuntu-latest
+    env:
+      URL: 'https://urleng.glitch.me/test'
+      METHOD: GET  # the method used to make the request. It is GET by default
+    steps:
+      - id: ping
+        uses: sisodiya2421/pinger@master
