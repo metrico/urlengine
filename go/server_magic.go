@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/cors"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/metrico/pasticca/paste"
@@ -48,6 +49,17 @@ func main() {
 	}
 
 	router := gin.Default()
+
+	// CORS configuration
+    	config := cors.Config{
+        	AllowOrigins:     []string{"*"},
+        	AllowMethods:     []string{"GET", "HEAD"},
+        	AllowHeaders:     []string{"*"},
+        	ExposeHeaders:    []string{},
+        	MaxAge:           3000,
+    	}
+
+    	router.Use(cors.New(config))
 
 	router.GET("/*path", server.handleRequest)
 	router.HEAD("/*path", server.handleRequest)
