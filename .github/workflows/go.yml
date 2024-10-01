@@ -39,7 +39,7 @@ jobs:
            go build -v -o duckserver_magic server_magic.go
            
     - name: Patch glibc for backwards compatibility
-      uses: lmangani/polyfill-glibc-action@1.1.2
+      uses: lmangani/polyfill-glibc-action@1.1.3
       continue-on-error: true
       id: polyfill
       with:
@@ -47,7 +47,7 @@ jobs:
         target: "/github/workspace/go/duckserver"
         
     - name: Patch glibc for backwards compatibility
-      uses: lmangani/polyfill-glibc-action@1.1.2
+      uses: lmangani/polyfill-glibc-action@1.1.3
       continue-on-error: true
       with:
         glibc: "2.27"
