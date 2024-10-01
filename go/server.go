@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/cors"
 )
 
 const DBDir = ".local/tmp"
@@ -23,6 +24,17 @@ type HivePathInfo struct {
 
 func main() {
 	router := gin.Default()
+
+	// CORS configuration
+	config := cors.Config{
+                AllowOrigins:     []string{"*"},
+                AllowMethods:     []string{"GET", "HEAD"},
+                AllowHeaders:     []string{"*"},
+                ExposeHeaders:    []string{},
+                MaxAge:           5000,
+	}
+
+	router.Use(cors.New(config))
 
 	if err := os.MkdirAll(DBDir, os.ModePerm); err != nil {
 		log.Fatal(err)
