@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -8,13 +9,25 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 )
 
 const DBDir = ".local/tmp"
+
+type StorageConfig struct {
+	s3Client    *s3.Client
+	bucketName  string
+	useS3       bool
+	uploadMutex sync.Mutex
+}
 
 type HivePathInfo struct {
 	Partitions  map[string]string
@@ -22,16 +35,66 @@ type HivePathInfo struct {
 	IsHiveStyle bool
 }
 
+var storage StorageConfig
+
+func initStorage() error {
+	endpoint := getEnv("S3_ENDPOINT", "")
+	bucketName := getEnv("S3_BUCKET", "")
+	accessKey := getEnv("S3_ACCESS_KEY", "")
+	secretKey := getEnv("S3_SECRET_KEY", "")
+	useS3 := endpoint != "" && bucketName != "" && accessKey != "" && secretKey != ""
+
+	if useS3 {
+		customResolver := aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
+			return aws.Endpoint{
+				URL:               endpoint,
+				SigningRegion:    "us-east-1",
+				HostnameImmutable: true,
+				Source:            aws.EndpointSourceCustom,
+			}, nil
+		})
+
+		cfg := aws.Config{
+			Credentials:      credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
+			EndpointResolver: customResolver,
+			Region:          "us-east-1",
+			BaseEndpoint:    aws.String(endpoint),
+		}
+
+		client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+			o.UsePathStyle = true
+		})
+
+		storage = StorageConfig{
+			s3Client:   client,
+			bucketName: bucketName,
+			useS3:      true,
+		}
+		
+		log.Printf("S3-compatible storage initialized with endpoint: %s, bucket: %s", endpoint, bucketName)
+	} else {
+		storage = StorageConfig{
+			useS3: false,
+		}
+		log.Println("Running in local storage mode")
+	}
+
+	return nil
+}
+
 func main() {
+	if err := initStorage(); err != nil {
+		log.Fatal(err)
+	}
+
 	router := gin.Default()
 
-	// CORS configuration
 	config := cors.Config{
-                AllowOrigins:     []string{"*"},
-                AllowMethods:     []string{"GET", "HEAD"},
-                AllowHeaders:     []string{"*"},
-                ExposeHeaders:    []string{},
-                MaxAge:           5000,
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "HEAD"},
+		AllowHeaders:     []string{"*"},
+		ExposeHeaders:    []string{},
+		MaxAge:           5000,
 	}
 
 	router.Use(cors.New(config))
@@ -86,6 +149,68 @@ func getFilePath(requestPath string) string {
 	}
 
 	return filepath.Join(DBDir, requestPath)
+}
+
+func fetchFromS3(s3Path string, localPath string) error {
+	if !storage.useS3 {
+		return fmt.Errorf("S3 storage not configured")
+	}
+
+	ctx := context.Background()
+	
+	if err := os.MkdirAll(filepath.Dir(localPath), os.ModePerm); err != nil {
+		return err
+	}
+
+	file, err := os.Create(localPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	downloader := manager.NewDownloader(storage.s3Client)
+	_, err = downloader.Download(ctx, file, &s3.GetObjectInput{
+		Bucket: aws.String(storage.bucketName),
+		Key:    aws.String(s3Path),
+	})
+
+	if err != nil {
+		os.Remove(localPath)
+		return fmt.Errorf("failed to download from S3: %v", err)
+	}
+
+	log.Printf("Successfully downloaded %s from S3", s3Path)
+	return nil
+}
+
+func uploadToS3(localPath string, s3Path string) {
+	if !storage.useS3 {
+		return
+	}
+
+	storage.uploadMutex.Lock()
+	defer storage.uploadMutex.Unlock()
+
+	file, err := os.Open(localPath)
+	if err != nil {
+		log.Printf("Failed to open file for S3 upload: %v", err)
+		return
+	}
+	defer file.Close()
+
+	ctx := context.Background()
+	uploader := manager.NewUploader(storage.s3Client)
+	_, err = uploader.Upload(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(storage.bucketName),
+		Key:    aws.String(s3Path),
+		Body:   file,
+	})
+
+	if err != nil {
+		log.Printf("Failed to upload to S3: %v", err)
+	} else {
+		log.Printf("Successfully uploaded %s to S3", s3Path)
+	}
 }
 
 func handleRequest(c *gin.Context) {
@@ -160,9 +285,6 @@ func handleWildcardHeadRequest(c *gin.Context, matchingFiles []string) {
 		}
 	}
 
-	log.Printf("HEAD request: Total size: %d, Last modified: %s, Matched files: %d",
-		totalSize, lastModified.UTC().Format(http.TimeFormat), len(matchingFiles))
-
 	c.Header("Content-Length", fmt.Sprintf("%d", totalSize))
 	c.Header("Last-Modified", lastModified.UTC().Format(http.TimeFormat))
 	c.Header("Accept-Ranges", "bytes")
@@ -197,17 +319,29 @@ func handleExactPathRequest(c *gin.Context, info HivePathInfo) {
 
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if os.IsNotExist(err) && storage.useS3 {
+			// Try fetching from S3 before returning 404
+			relPath, _ := filepath.Rel(DBDir, filePath)
+			if err := fetchFromS3(relPath, filePath); err != nil {
+				log.Printf("S3 fetch failed: %v", err)
+				c.JSON(http.StatusNotFound, gin.H{"error": "Not found in local storage or S3"})
+				return
+			}
+			fileInfo, err = os.Stat(filePath)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stat file after S3 fetch"})
+				return
+			}
+		} else if os.IsNotExist(err) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+			return
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
 		}
-		return
 	}
 
 	if fileInfo.IsDir() {
-		// handleDirectory(c, filePath)
-		// Return an empty response for directory requests
 		c.String(http.StatusOK, "")
 	} else {
 		handleSingleFile(c, filePath)
@@ -249,21 +383,6 @@ func handleMultipleFiles(c *gin.Context, matchingFiles []string) {
 	}
 }
 
-func handleDirectory(c *gin.Context, dirPath string) {
-	files, err := filepath.Glob(filepath.Join(dirPath, "*"))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read directory"})
-		return
-	}
-
-	relativeFiles := make([]string, len(files))
-	for i, file := range files {
-		relativeFiles[i], _ = filepath.Rel(DBDir, file)
-	}
-
-	c.JSON(http.StatusOK, relativeFiles)
-}
-
 func handlePostRequest(c *gin.Context) {
 	requestPath := c.Param("path")
 	if requestPath == "" {
@@ -290,5 +409,11 @@ func handlePostRequest(c *gin.Context) {
 	}
 
 	relativePath, _ := filepath.Rel(DBDir, filePath)
+	
+	// Asynchronously upload to S3 if configured
+	if storage.useS3 {
+		go uploadToS3(filePath, relativePath)
+	}
+
 	c.JSON(http.StatusOK, gin.H{"success": true, "path": relativePath})
 }
