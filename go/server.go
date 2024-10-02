@@ -44,6 +44,9 @@ func initStorage() error {
     secretKey := getEnv("S3_SECRET_KEY", "")
     useS3 := endpoint != "" && bucketName != "" && accessKey != "" && secretKey != ""
 
+    log.Printf("S3_ENDPOINT: %s", endpoint)
+    log.Printf("BOOL useS3: %v", useS3)
+
     if useS3 {
         log.Printf("Initializing MinIO storage with endpoint: %s, bucket: %s", endpoint, bucketName)
         
