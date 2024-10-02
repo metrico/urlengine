@@ -38,48 +38,57 @@ type HivePathInfo struct {
 var storage StorageConfig
 
 func initStorage() error {
-	endpoint := getEnv("S3_ENDPOINT", "")
-	bucketName := getEnv("S3_BUCKET", "")
-	accessKey := getEnv("S3_ACCESS_KEY", "")
-	secretKey := getEnv("S3_SECRET_KEY", "")
-	useS3 := endpoint != "" && bucketName != "" && accessKey != "" && secretKey != ""
+    endpoint := getEnv("S3_ENDPOINT", "")
+    bucketName := getEnv("S3_BUCKET", "")
+    accessKey := getEnv("S3_ACCESS_KEY", "")
+    secretKey := getEnv("S3_SECRET_KEY", "")
+    useS3 := endpoint != "" && bucketName != "" && accessKey != "" && secretKey != ""
 
-	if useS3 {
-		customResolver := aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
-			return aws.Endpoint{
-				URL:               endpoint,
-				SigningRegion:    "us-east-1",
-				HostnameImmutable: true,
-				Source:            aws.EndpointSourceCustom,
-			}, nil
-		})
+    if useS3 {
+        log.Printf("Initializing MinIO storage with endpoint: %s, bucket: %s", endpoint, bucketName)
+        
+        cfg := aws.Config{
+            Credentials: credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
+            EndpointResolver: aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
+                return aws.Endpoint{
+                    URL: endpoint,
+                    Source: aws.EndpointSourceCustom,
+                }, nil
+            }),
+        }
 
-		cfg := aws.Config{
-			Credentials:      credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
-			EndpointResolver: customResolver,
-			Region:          "us-east-1",
-			BaseEndpoint:    aws.String(endpoint),
-		}
+        client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+            o.UsePathStyle = true
+        })
 
-		client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-			o.UsePathStyle = true
-		})
+        // Verify MinIO connection
+        ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+        defer cancel()
+        
+        _, err := client.HeadBucket(ctx, &s3.HeadBucketInput{
+            Bucket: aws.String(bucketName),
+        })
+        
+        if err != nil {
+            log.Printf("Failed to connect to MinIO: %v", err)
+            return fmt.Errorf("MinIO connection test failed: %v", err)
+        }
 
-		storage = StorageConfig{
-			s3Client:   client,
-			bucketName: bucketName,
-			useS3:      true,
-		}
-		
-		log.Printf("S3-compatible storage initialized with endpoint: %s, bucket: %s", endpoint, bucketName)
-	} else {
-		storage = StorageConfig{
-			useS3: false,
-		}
-		log.Println("Running in local storage mode")
-	}
+        storage = StorageConfig{
+            s3Client:   client,
+            bucketName: bucketName,
+            useS3:      true,
+        }
+        
+        log.Printf("Successfully connected to MinIO storage")
+    } else {
+        storage = StorageConfig{
+            useS3: false,
+        }
+        log.Println("Running in local storage mode")
+    }
 
-	return nil
+    return nil
 }
 
 func main() {
@@ -184,34 +193,43 @@ func fetchFromS3(s3Path string, localPath string) error {
 }
 
 func uploadToS3(localPath string, s3Path string) {
-	if !storage.useS3 {
-		return
-	}
+    if !storage.useS3 {
+        log.Printf("MinIO not configured, skipping upload")
+        return
+    }
 
-	storage.uploadMutex.Lock()
-	defer storage.uploadMutex.Unlock()
+    // Clean the path
+    s3Path = strings.TrimPrefix(s3Path, "/")
+    log.Printf("Starting MinIO upload - local: %s, remote path: %s", localPath, s3Path)
 
-	file, err := os.Open(localPath)
-	if err != nil {
-		log.Printf("Failed to open file for S3 upload: %v", err)
-		return
-	}
-	defer file.Close()
+    storage.uploadMutex.Lock()
+    defer storage.uploadMutex.Unlock()
 
-	ctx := context.Background()
-	uploader := manager.NewUploader(storage.s3Client)
-	_, err = uploader.Upload(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(storage.bucketName),
-		Key:    aws.String(s3Path),
-		Body:   file,
-	})
+    file, err := os.Open(localPath)
+    if err != nil {
+        log.Printf("Failed to open file for MinIO upload: %v", err)
+        return
+    }
+    defer file.Close()
 
-	if err != nil {
-		log.Printf("Failed to upload to S3: %v", err)
-	} else {
-		log.Printf("Successfully uploaded %s to S3", s3Path)
-	}
+    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+    defer cancel()
+
+    uploader := manager.NewUploader(storage.s3Client)
+    result, err := uploader.Upload(ctx, &s3.PutObjectInput{
+        Bucket: aws.String(storage.bucketName),
+        Key:    aws.String(s3Path),
+        Body:   file,
+    })
+
+    if err != nil {
+        log.Printf("Failed to upload to MinIO: %v", err)
+        return
+    }
+    
+    log.Printf("Successfully uploaded file to MinIO: %s, Location: %s", s3Path, result.Location)
 }
+
 
 func handleRequest(c *gin.Context) {
 	requestPath := c.Param("path")
