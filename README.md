@@ -119,9 +119,13 @@ sequenceDiagram
         DuckServer->>DuckServer: WRITE FILE
     end
     DuckServer-->>DuckDB: POST Response
-    DuckDB->>DuckServer: GET Request
+    DuckDB->>DuckServer: HEAD Request
     loop Storage
-        DuckServer->>DuckServer: READ FILE
+        DuckServer->>DuckServer: READ FILE SIZE
+    end
+    DuckDB->>DuckServer: GET RANGE Request
+    loop Storage
+        DuckServer->>DuckServer: READ FILE RANGE
     end
     DuckServer-->>DuckDB: GET Response
 ```
